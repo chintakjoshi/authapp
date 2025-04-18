@@ -1,5 +1,5 @@
 # authapp
 
-## `./mvnw clean package`
+## `./mvnw clean package -DskipTests`
 
 ## `docker-compose up --build -d`

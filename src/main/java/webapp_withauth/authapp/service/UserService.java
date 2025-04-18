@@ -16,7 +16,8 @@ public class UserService implements UserDetailsService {
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         User user = repo.findByUsername(username)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
+                .filter(User::isEnabled)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found or not verified"));
 
         System.out.println("🔍 Found user: " + user.getUsername());
         System.out.println("   Role: " + user.getRole());
