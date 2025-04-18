@@ -18,6 +18,8 @@ services:
       context: .
     container_name: spring-backend
     environment:
+      EMAIL_USERNAME: ${EMAIL_USERNAME}
+      EMAIL_PASSWORD: ${EMAIL_PASSWORD}
       DB_HOST: db
       DB_PORT: 5432
       DB_NAME: authdb
