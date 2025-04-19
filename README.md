@@ -2,9 +2,9 @@
 An authentication app that currently supports token-based authentication and email verification by OTP. This application utilizes Spring Boot for backend, React for frontend and PostgreSQL for Data Store.
 
 ## Prerequisites
-* Java 21
-* Maven
-* NodeJS
+* Java 21.0.6
+* Apache Maven 3.9.9
+* NodeJS v22.14.0
 * Docker
   
 ## Step 1
