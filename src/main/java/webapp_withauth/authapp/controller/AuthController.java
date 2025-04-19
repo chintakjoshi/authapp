@@ -1,6 +1,7 @@
 package webapp_withauth.authapp.controller;
 
 import webapp_withauth.authapp.model.*;
+import webapp_withauth.authapp.repository.PasswordResetTokenRepository;
 import webapp_withauth.authapp.repository.PendingUserRepository;
 import webapp_withauth.authapp.repository.UserRepository;
 import webapp_withauth.authapp.security.JwtService;
@@ -9,7 +10,9 @@ import lombok.RequiredArgsConstructor;
 
 import java.time.LocalDateTime;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Random;
+import java.util.UUID;
 
 import org.springframework.http.*;
 import org.springframework.security.authentication.*;
@@ -28,6 +31,7 @@ public class AuthController {
     private final EmailService emailService;
     private final PasswordEncoder encoder;
     private final PendingUserRepository pendingUserRepo;
+    private final PasswordResetTokenRepository resetTokenRepo;
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody AuthRequest req) {
@@ -124,5 +128,59 @@ public class AuthController {
                 "✅ Welcome to AuthApp!\nYour account is now verified. You can log in here: http://localhost/login");
 
         return ResponseEntity.ok("Your email is verified. You can now log in.");
-    }  
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@RequestParam String email) {
+        Optional<User> userOpt = userRepo.findByEmail(email);
+        if (userOpt.isEmpty()) {
+            return ResponseEntity.ok("If the email exists, a reset link will be sent."); // Don't leak existence
+        }
+
+        String token = UUID.randomUUID().toString();
+        resetTokenRepo.deleteByEmail(email);
+        resetTokenRepo.save(PasswordResetToken.builder()
+                .email(email)
+                .token(token)
+                .expiry(LocalDateTime.now().plusMinutes(15))
+                .build());
+
+        String link = "http://localhost/reset-password?token=" + token;
+        emailService.send(email, "Reset your password",
+                "Click here to reset your password(This link will expire in 15 minutes): " + link);
+
+        return ResponseEntity.ok("If the email exists, a reset link will be sent.");
+    }
+
+    @PostMapping("/reset-password")
+    @Transactional
+    public ResponseEntity<?> resetPassword(@RequestParam String token, @RequestParam String newPassword) {
+        PasswordResetToken resetToken = resetTokenRepo.findByToken(token)
+                .orElseThrow(() -> new RuntimeException("Invalid reset token"));
+
+        if (resetToken.getExpiry().isBefore(LocalDateTime.now())) {
+            return ResponseEntity.status(HttpStatus.GONE).body("Reset token expired");
+        }
+
+        User user = userRepo.findByEmail(resetToken.getEmail())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        user.setPassword(encoder.encode(newPassword));
+        userRepo.save(user);
+        resetTokenRepo.deleteByEmail(user.getEmail());
+
+        emailService.send(
+                user.getEmail(),
+                "Your password has been reset",
+                """
+                        🔒 Your password was successfully reset.
+
+                        You can now log in using your new password:
+                        http://localhost/login
+
+                        If you did not perform this action, please contact support immediately.
+                        """);
+
+        return ResponseEntity.ok("Password reset successful. You can now log in.");
+    }
 }

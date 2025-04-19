@@ -20,15 +20,39 @@ function Login() {
     }
   };
 
+  const handleRegister = () => {
+    navigate('/register');
+  };
+
+  const handleForgotPassword = () => {
+    navigate('/forgot-password');
+  };
+
   return (
     <div>
       <h2>Login</h2>
       {error && <p>{error}</p>}
       <form onSubmit={handleLogin}>
-        <input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Username" />
-        <input value={password} onChange={(e) => setPassword(e.target.value)} type="password" placeholder="Password" />
+        <input 
+          value={username} 
+          onChange={(e) => setUsername(e.target.value)} 
+          placeholder="Username" 
+          required 
+        />
+        <input 
+          value={password} 
+          onChange={(e) => setPassword(e.target.value)} 
+          type="password" 
+          placeholder="Password" 
+          required 
+        />
         <button type="submit">Login</button>
       </form>
+      
+      <div>
+        <button onClick={handleRegister}>Register</button>
+        <button onClick={handleForgotPassword}>Forgot Password?</button>
+      </div>
     </div>
   );
 }
