@@ -1,4 +1,6 @@
 spring:
+  application:
+    name: authapp
   mail:
     host: smtp.gmail.com
     port: 587
@@ -22,6 +24,9 @@ spring:
   servlet:
     multipart:
       enabled: true
+
+jwt:
+  secret: ${JWT_SECRET}
 
 logging:
   level:

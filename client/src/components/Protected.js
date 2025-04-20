@@ -15,8 +15,22 @@ function Protected() {
       });
   }, []);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    const refreshToken = localStorage.getItem('refreshToken');
+    const accessToken = localStorage.getItem('token');
+
+    try {
+      await axios.post('/auth/logout', { refreshToken }, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`
+        }
+      });
+    } catch (err) {
+      console.warn('Logout request failed or token was already removed');
+    }
+
     localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
     navigate('/login');
   };
 

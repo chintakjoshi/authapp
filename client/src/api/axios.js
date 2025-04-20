@@ -6,6 +6,15 @@ const instance = axios.create({
   baseURL: BASE_URL,
 });
 
+function getDeviceId() {
+  let id = localStorage.getItem('deviceId');
+  if (!id) {
+    id = crypto.randomUUID();
+    localStorage.setItem('deviceId', id);
+  }
+  return id;
+}
+
 // Attach token only to protected endpoints (not /auth/*)
 instance.interceptors.request.use(config => {
   const token = localStorage.getItem('token');
@@ -37,7 +46,10 @@ instance.interceptors.response.use(
         if (!refreshToken) throw new Error('No refresh token available');
 
         // Attempt to refresh access token
-        const refreshResponse = await axios.post('/auth/refresh', { refreshToken });
+        const refreshResponse = await axios.post('/auth/refresh', {
+          refreshToken,
+          deviceId: getDeviceId(),
+        });
 
         const newAccessToken = refreshResponse.data.accessToken;
         localStorage.setItem('token', newAccessToken);

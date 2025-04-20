@@ -7,6 +7,7 @@ import org.springframework.stereotype.Component;
 
 import webapp_withauth.authapp.repository.PasswordResetTokenRepository;
 import webapp_withauth.authapp.repository.PendingUserRepository;
+import webapp_withauth.authapp.repository.RefreshTokenRepository;
 
 import java.time.LocalDateTime;
 
@@ -17,6 +18,7 @@ public class PendingUserCleanupJob {
 
     private final PendingUserRepository pendingUserRepo;
     private final PasswordResetTokenRepository resetTokenRepo;
+    private final RefreshTokenRepository refreshTokenRepo;
 
     // Run every 10 minutes
     @Scheduled(fixedRate = 10 * 60 * 1000)
@@ -35,5 +37,10 @@ public class PendingUserCleanupJob {
     @Scheduled(fixedRate = 5 * 60 * 1000)
     public void cleanExpiredResetTokens() {
         resetTokenRepo.deleteAllByExpiryBefore(LocalDateTime.now());
+    }
+
+    @Scheduled(fixedRate = 5 * 60 * 1000)
+    public void cleanExpiredRefreshTokens() {
+        refreshTokenRepo.deleteAllByExpiryBefore(LocalDateTime.now());
     }
 }

@@ -9,12 +9,28 @@ function ResetPassword() {
   const [newPassword, setNewPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [message, setMessage] = useState('');
+  const [validToken, setValidToken] = useState(false);
+  const [checked, setChecked] = useState(false);
+
   const navigate = useNavigate();
 
   useEffect(() => {
     if (!token) {
-      setMessage('Invalid or missing reset token.');
+      setMessage('Missing reset token.');
+      setChecked(true);
+      return;
     }
+
+    axios.get('/auth/validate-reset-token', { params: { token } })
+      .then(() => {
+        setValidToken(true);
+      })
+      .catch((err) => {
+        setMessage(err.response?.data || 'Invalid or expired token.');
+      })
+      .finally(() => {
+        setChecked(true);
+      });
   }, [token]);
 
   const handleSubmit = async (e) => {
@@ -35,27 +51,31 @@ function ResetPassword() {
     }
   };
 
+  if (!checked) return <p>Checking token...</p>;
+
   return (
     <div>
       <h2>Reset Password</h2>
-      {message && <p>{message}</p>}
-      <form onSubmit={handleSubmit}>
-        <input
-          type="password"
-          placeholder="New Password"
-          value={newPassword}
-          onChange={(e) => setNewPassword(e.target.value)}
-          required
-        />
-        <input
-          type="password"
-          placeholder="Confirm Password"
-          value={confirm}
-          onChange={(e) => setConfirm(e.target.value)}
-          required
-        />
-        <button type="submit" disabled={!token}>Reset Password</button>
-      </form>
+      {message && <p style={{ color: validToken ? 'green' : 'red' }}>{message}</p>}
+      {validToken && (
+        <form onSubmit={handleSubmit}>
+          <input
+            type="password"
+            placeholder="New Password"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            required
+          />
+          <input
+            type="password"
+            placeholder="Confirm Password"
+            value={confirm}
+            onChange={(e) => setConfirm(e.target.value)}
+            required
+          />
+          <button type="submit" disabled={!token}>Reset Password</button>
+        </form>
+      )}
     </div>
   );
 }

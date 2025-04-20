@@ -20,8 +20,6 @@ public class UserService implements UserDetailsService {
                 .orElseThrow(() -> new UsernameNotFoundException("User not found or not verified"));
 
         System.out.println("🔍 Found user: " + user.getUsername());
-        System.out.println("   Role: " + user.getRole());
-        System.out.println("   Password: " + user.getPassword());
 
         if (user.getRole() == null || user.getRole().isBlank()) {
             throw new IllegalStateException("User role is missing for: " + username);
