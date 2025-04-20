@@ -20,6 +20,7 @@ services:
     environment:
       EMAIL_USERNAME: ${EMAIL_USERNAME}
       EMAIL_PASSWORD: ${EMAIL_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
       DB_HOST: db
       DB_PORT: 5432
       DB_NAME: authdb

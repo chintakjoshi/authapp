@@ -3,6 +3,7 @@ package webapp_withauth.authapp.controller;
 import webapp_withauth.authapp.model.*;
 import webapp_withauth.authapp.repository.PasswordResetTokenRepository;
 import webapp_withauth.authapp.repository.PendingUserRepository;
+import webapp_withauth.authapp.repository.RefreshTokenRepository;
 import webapp_withauth.authapp.repository.UserRepository;
 import webapp_withauth.authapp.security.JwtService;
 import webapp_withauth.authapp.service.EmailService;
@@ -19,6 +20,9 @@ import org.springframework.security.authentication.*;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
+
+import jakarta.servlet.http.HttpServletRequest;
+
 import org.springframework.transaction.annotation.Transactional;
 
 @RestController
@@ -32,19 +36,37 @@ public class AuthController {
     private final PasswordEncoder encoder;
     private final PendingUserRepository pendingUserRepo;
     private final PasswordResetTokenRepository resetTokenRepo;
+    private final RefreshTokenRepository refreshTokenRepo;
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody AuthRequest req) {
+    public ResponseEntity<?> login(@RequestBody AuthRequest req, HttpServletRequest request) {
         authManager.authenticate(
                 new UsernamePasswordAuthenticationToken(req.getUsername(), req.getPassword()));
+
         User user = userRepo.findByUsername(req.getUsername()).orElseThrow();
         UserDetails springUser = org.springframework.security.core.userdetails.User.builder()
                 .username(user.getUsername())
                 .password(user.getPassword())
                 .roles(user.getRole())
                 .build();
+
         String accessToken = jwtService.generateAccessToken(springUser);
         String refreshToken = jwtService.generateRefreshToken(springUser);
+
+        String ip = request.getHeader("X-Forwarded-For");
+        if (ip == null)
+            ip = request.getRemoteAddr();
+
+        refreshTokenRepo.save(RefreshToken.builder()
+                .username(user.getUsername())
+                .token(refreshToken)
+                .expiry(LocalDateTime.now().plusDays(7))
+                .revoked(false)
+                .ip(ip)
+                .userAgent(request.getHeader("User-Agent"))
+                .deviceId(req.getDeviceId())
+                .build());
+
         return ResponseEntity.ok(new AuthResponse(accessToken, refreshToken));
     }
 
@@ -75,15 +97,24 @@ public class AuthController {
         emailService.send(
                 request.getEmail(),
                 "Verify your account",
-                "Your OTP is: " + otp);
+                "Your OTP for the registration is (This OTP will expire in 10 minutes): " + otp);
 
         return ResponseEntity.ok("OTP sent to your email");
     }
 
     @PostMapping("/refresh")
-    public ResponseEntity<?> refresh(@RequestBody RefreshRequest req) {
+    public ResponseEntity<?> refresh(@RequestBody RefreshRequest req, HttpServletRequest request) {
         String refreshToken = req.getRefreshToken();
         String username = jwtService.extractUsername(refreshToken);
+
+        Optional<RefreshToken> stored = refreshTokenRepo.findByToken(refreshToken);
+        if (stored.isEmpty()
+                || stored.get().isRevoked()
+                || stored.get().getExpiry().isBefore(LocalDateTime.now())
+                || !stored.get().getDeviceId().equals(req.getDeviceId())) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid device context");
+        }
+
         User user = userRepo.findByUsername(username).orElseThrow();
         UserDetails springUser = org.springframework.security.core.userdetails.User.builder()
                 .username(user.getUsername())
@@ -94,6 +125,7 @@ public class AuthController {
         if (!jwtService.isTokenValid(refreshToken, springUser)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid refresh token");
         }
+
         String newAccessToken = jwtService.generateAccessToken(springUser);
         return ResponseEntity.ok(Map.of("accessToken", newAccessToken));
     }
@@ -182,5 +214,26 @@ public class AuthController {
                         """);
 
         return ResponseEntity.ok("Password reset successful. You can now log in.");
+    }
+
+    @PostMapping("/logout")
+    @Transactional
+    public ResponseEntity<?> logout(@RequestBody RefreshRequest req) {
+        refreshTokenRepo.deleteByToken(req.getRefreshToken());
+        return ResponseEntity.ok("Logged out");
+    }
+
+    @GetMapping("/validate-reset-token")
+    public ResponseEntity<?> validateResetToken(@RequestParam String token) {
+        Optional<PasswordResetToken> resetTokenOpt = resetTokenRepo.findByToken(token);
+        if (resetTokenOpt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Invalid token");
+        }
+
+        if (resetTokenOpt.get().getExpiry().isBefore(LocalDateTime.now())) {
+            return ResponseEntity.status(HttpStatus.GONE).body("Token expired");
+        }
+
+        return ResponseEntity.ok("Token is valid");
     }
 }
