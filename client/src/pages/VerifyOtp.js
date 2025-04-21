@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from '../api/axios';
 import { useNavigate } from 'react-router-dom';
 
@@ -8,6 +8,7 @@ function VerifyOtp() {
     const [message, setMessage] = useState('');
     const navigate = useNavigate();
     const email = localStorage.getItem('pendingEmail');
+    const [cooldown, setCooldown] = useState(0);
 
     const handleVerify = async (e) => {
         e.preventDefault();
@@ -24,6 +25,25 @@ function VerifyOtp() {
         }
     };
 
+    const handleResend = async () => {
+        try {
+            await axios.post('/auth/resend-otp', { email });
+            setMessage('📨 A new OTP has been sent to your email.');
+            setError('');
+            setCooldown(180);
+        } catch (err) {
+            setError(err.response?.data || 'Unable to resend OTP.');
+        }
+    };
+
+    useEffect(() => {
+        if (cooldown === 0) return;
+        const interval = setInterval(() => {
+            setCooldown((prev) => prev - 1);
+        }, 1000);
+        return () => clearInterval(interval);
+    }, [cooldown]);
+
     if (!email) return <p>No pending registration.</p>;
 
     return (
@@ -34,6 +54,9 @@ function VerifyOtp() {
             <form onSubmit={handleVerify}>
                 <input value={otp} onChange={(e) => setOtp(e.target.value)} placeholder="Enter 4-digit OTP" required />
                 <button type="submit">Verify</button>
+                <button type="button" onClick={handleResend} disabled={cooldown > 0}>
+                    {cooldown > 0 ? `Resend OTP (${cooldown}s)` : 'Resend OTP'}
+                </button>
             </form>
         </div>
     );

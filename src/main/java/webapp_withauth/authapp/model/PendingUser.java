@@ -30,5 +30,8 @@ public class PendingUser {
     private String otp;
 
     @Column(nullable = false)
+    private LocalDateTime otpSentAt;
+
+    @Column(nullable = false)
     private LocalDateTime expiry;
 }

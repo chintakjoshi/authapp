@@ -18,5 +18,7 @@ public class PasswordResetToken {
 
     private String token;
 
+    private LocalDateTime sentAt;
+
     private LocalDateTime expiry;
 }

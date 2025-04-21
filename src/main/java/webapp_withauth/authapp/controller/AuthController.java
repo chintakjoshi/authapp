@@ -9,10 +9,10 @@ import webapp_withauth.authapp.security.JwtService;
 import webapp_withauth.authapp.service.EmailService;
 import lombok.RequiredArgsConstructor;
 
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Random;
 import java.util.UUID;
 
 import org.springframework.http.*;
@@ -83,7 +83,9 @@ public class AuthController {
             return ResponseEntity.badRequest().body("Username or email already in use");
         }
 
-        String otp = String.valueOf(new Random().nextInt(9000) + 1000);
+        SecureRandom secureRandom = new SecureRandom();
+        String otp = String.valueOf(100000 + secureRandom.nextInt(900000));
+        LocalDateTime now = LocalDateTime.now();
 
         pendingUserRepo.deleteByEmail(request.getEmail());
         pendingUserRepo.save(PendingUser.builder()
@@ -91,7 +93,8 @@ public class AuthController {
                 .email(request.getEmail())
                 .encodedPassword(encoder.encode(request.getPassword()))
                 .otp(otp)
-                .expiry(LocalDateTime.now().plusMinutes(5))
+                .expiry(now.plusMinutes(5))
+                .otpSentAt(now)
                 .build());
 
         emailService.send(
@@ -163,26 +166,39 @@ public class AuthController {
     }
 
     @PostMapping("/forgot-password")
+    @Transactional
     public ResponseEntity<?> forgotPassword(@RequestParam String email) {
         Optional<User> userOpt = userRepo.findByEmail(email);
         if (userOpt.isEmpty()) {
-            return ResponseEntity.ok("If the email exists, a reset link will be sent."); // Don't leak existence
+            return ResponseEntity.ok("If the email exists, a reset link will be sent.");
+        }
+
+        // Check if a recent token was already sent
+        Optional<PasswordResetToken> existingToken = resetTokenRepo.findByEmail(email);
+        if (existingToken.isPresent()) {
+            LocalDateTime lastSent = existingToken.get().getSentAt();
+            if (lastSent != null && lastSent.isAfter(LocalDateTime.now().minusMinutes(3))) {
+                return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                        .body("You can request a reset link only every 3 minutes");
+            }
         }
 
         String token = UUID.randomUUID().toString();
         resetTokenRepo.deleteByEmail(email);
+
         resetTokenRepo.save(PasswordResetToken.builder()
                 .email(email)
                 .token(token)
                 .expiry(LocalDateTime.now().plusMinutes(15))
+                .sentAt(LocalDateTime.now())
                 .build());
 
         String link = "http://localhost/reset-password?token=" + token;
         emailService.send(email, "Reset your password",
-                "Click here to reset your password(This link will expire in 15 minutes): " + link);
+                "Click here to reset your password (valid for 15 minutes): " + link);
 
-        return ResponseEntity.ok("If the email exists, a reset link will be sent.");
-    }
+        return ResponseEntity.ok("If the email exists, a reset link has been sent.");
+    }   
 
     @PostMapping("/reset-password")
     @Transactional
@@ -214,6 +230,43 @@ public class AuthController {
                         """);
 
         return ResponseEntity.ok("Password reset successful. You can now log in.");
+    }
+
+    @PostMapping("/resend-otp")
+    @Transactional
+    public ResponseEntity<?> resendOtp(@RequestBody ResendOtpRequest req) {
+        Optional<PendingUser> pendingOpt = pendingUserRepo.findByEmail(req.getEmail());
+
+        if (pendingOpt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("No pending registration for this email");
+        }
+
+        PendingUser pending = pendingOpt.get();
+
+        // Enforce 3-minute resend cooldown
+        if (pending.getOtpSentAt() != null && pending.getOtpSentAt().isAfter(LocalDateTime.now().minusMinutes(3))) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                    .body("You can request a new OTP only every 3 minutes");
+        }
+
+        // Generate new 6-digit OTP securely
+        SecureRandom secureRandom = new SecureRandom();
+        String newOtp = String.valueOf(100000 + secureRandom.nextInt(900000));
+        LocalDateTime now = LocalDateTime.now();
+
+        // Update OTP, expiry, and sent timestamp
+        pending.setOtp(newOtp);
+        pending.setExpiry(now.plusMinutes(5));
+        pending.setOtpSentAt(now);
+        pendingUserRepo.save(pending);
+
+        // Send email
+        emailService.send(
+                pending.getEmail(),
+                "New OTP for verification",
+                "Your new OTP is: " + newOtp + "\n(This OTP is valid for 5 minutes)");
+
+        return ResponseEntity.ok("A new OTP has been sent to your email");
     }
 
     @PostMapping("/logout")
