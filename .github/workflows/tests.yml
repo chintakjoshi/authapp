@@ -30,10 +30,9 @@ jobs:
             ${{ runner.os }}-maven-
 
       - name: Run Maven Tests
-        working-directory: backend
         run: mvn clean test
 
-  frontend-tests:
+  client-tests:
     name: Run React Tests
     runs-on: ubuntu-latest
 
@@ -49,15 +48,15 @@ jobs:
       - name: Cache Node modules
         uses: actions/cache@v3
         with:
-          path: frontend/node_modules
-          key: ${{ runner.os }}-node-${{ hashFiles('frontend/package-lock.json') }}
+          path: client/node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('client/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-node-
 
       - name: Install Dependencies
-        working-directory: frontend
+        working-directory: client
         run: npm install
 
       - name: Run React Tests
-        working-directory: frontend
+        working-directory: client
         run: npm test -- --watchAll=false
