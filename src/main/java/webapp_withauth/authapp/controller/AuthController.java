@@ -1,34 +1,31 @@
 package webapp_withauth.authapp.controller;
 
-import webapp_withauth.authapp.model.*;
-import webapp_withauth.authapp.repository.PasswordResetTokenRepository;
-import webapp_withauth.authapp.repository.PendingUserRepository;
-import webapp_withauth.authapp.repository.RefreshTokenRepository;
-import webapp_withauth.authapp.repository.UserRepository;
-import webapp_withauth.authapp.security.JwtService;
-import webapp_withauth.authapp.service.EmailService;
 import lombok.RequiredArgsConstructor;
-
-import java.security.SecureRandom;
-import java.time.LocalDateTime;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
-
 import org.springframework.http.*;
 import org.springframework.security.authentication.*;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
+import webapp_withauth.authapp.model.*;
+import webapp_withauth.authapp.repository.*;
+import webapp_withauth.authapp.security.JwtService;
+import webapp_withauth.authapp.service.EmailService;
 
 import jakarta.servlet.http.HttpServletRequest;
 
-import org.springframework.transaction.annotation.Transactional;
+import java.security.SecureRandom;
+import java.time.LocalDateTime;
+import java.util.*;
 
 @RestController
 @RequestMapping("/auth")
 @RequiredArgsConstructor
 public class AuthController {
+
     private final AuthenticationManager authManager;
     private final JwtService jwtService;
     private final UserRepository userRepo;
@@ -40,34 +37,47 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody AuthRequest req, HttpServletRequest request) {
-        authManager.authenticate(
-                new UsernamePasswordAuthenticationToken(req.getUsername(), req.getPassword()));
+        try {
+            Authentication auth = authManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(req.getUsername(), req.getPassword()));
 
-        User user = userRepo.findByUsername(req.getUsername()).orElseThrow();
-        UserDetails springUser = org.springframework.security.core.userdetails.User.builder()
-                .username(user.getUsername())
-                .password(user.getPassword())
-                .roles(user.getRole())
-                .build();
+            String username = auth.getName();
 
-        String accessToken = jwtService.generateAccessToken(springUser);
-        String refreshToken = jwtService.generateRefreshToken(springUser);
+            User user = userRepo.findByUsername(username)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
 
-        String ip = request.getHeader("X-Forwarded-For");
-        if (ip == null)
-            ip = request.getRemoteAddr();
+            UserDetails springUser = org.springframework.security.core.userdetails.User.builder()
+                    .username(user.getUsername())
+                    .password(user.getPassword())
+                    .roles(user.getRole())
+                    .build();
 
-        refreshTokenRepo.save(RefreshToken.builder()
-                .username(user.getUsername())
-                .token(refreshToken)
-                .expiry(LocalDateTime.now().plusDays(7))
-                .revoked(false)
-                .ip(ip)
-                .userAgent(request.getHeader("User-Agent"))
-                .deviceId(req.getDeviceId())
-                .build());
+            String accessToken = jwtService.generateAccessToken(springUser);
+            String refreshToken = jwtService.generateRefreshToken(springUser);
 
-        return ResponseEntity.ok(new AuthResponse(accessToken, refreshToken));
+            if (refreshToken == null || refreshToken.isBlank()) {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body("Failed to generate refresh token");
+            }
+
+            String ip = Optional.ofNullable(request.getHeader("X-Forwarded-For"))
+                    .orElseGet(request::getRemoteAddr);
+
+            refreshTokenRepo.save(RefreshToken.builder()
+                    .username(user.getUsername())
+                    .token(refreshToken)
+                    .expiry(LocalDateTime.now().plusDays(7))
+                    .revoked(false)
+                    .ip(ip)
+                    .userAgent(request.getHeader("User-Agent"))
+                    .deviceId(req.getDeviceId())
+                    .build());
+
+            return ResponseEntity.ok(new AuthResponse(accessToken, refreshToken));
+        } catch (AuthenticationException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body("Invalid username or password");
+        }
     }
 
     @PostMapping("/register")
@@ -110,15 +120,18 @@ public class AuthController {
         String refreshToken = req.getRefreshToken();
         String username = jwtService.extractUsername(refreshToken);
 
-        Optional<RefreshToken> stored = refreshTokenRepo.findByToken(refreshToken);
-        if (stored.isEmpty()
-                || stored.get().isRevoked()
-                || stored.get().getExpiry().isBefore(LocalDateTime.now())
-                || !stored.get().getDeviceId().equals(req.getDeviceId())) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid device context");
+        RefreshToken stored = refreshTokenRepo.findByToken(refreshToken)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Refresh token not found"));
+
+        if (stored.isRevoked()
+                || stored.getExpiry().isBefore(LocalDateTime.now())
+                || !stored.getDeviceId().equals(req.getDeviceId())) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid device context");
         }
 
-        User user = userRepo.findByUsername(username).orElseThrow();
+        User user = userRepo.findByUsername(username)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
+
         UserDetails springUser = org.springframework.security.core.userdetails.User.builder()
                 .username(user.getUsername())
                 .password(user.getPassword())
@@ -126,7 +139,7 @@ public class AuthController {
                 .build();
 
         if (!jwtService.isTokenValid(refreshToken, springUser)) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid refresh token");
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid refresh token");
         }
 
         String newAccessToken = jwtService.generateAccessToken(springUser);
@@ -137,7 +150,7 @@ public class AuthController {
     @Transactional
     public ResponseEntity<?> verify(@RequestParam String email, @RequestParam String otp) {
         PendingUser pending = pendingUserRepo.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("No pending registration found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No pending registration found"));
 
         if (!pending.getOtp().equals(otp)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid OTP");
@@ -173,7 +186,6 @@ public class AuthController {
             return ResponseEntity.ok("If the email exists, a reset link will be sent.");
         }
 
-        // Check if a recent token was already sent
         Optional<PasswordResetToken> existingToken = resetTokenRepo.findByEmail(email);
         if (existingToken.isPresent()) {
             LocalDateTime lastSent = existingToken.get().getSentAt();
@@ -198,20 +210,20 @@ public class AuthController {
                 "Click here to reset your password (valid for 15 minutes): " + link);
 
         return ResponseEntity.ok("If the email exists, a reset link has been sent.");
-    }   
+    }
 
     @PostMapping("/reset-password")
     @Transactional
     public ResponseEntity<?> resetPassword(@RequestParam String token, @RequestParam String newPassword) {
         PasswordResetToken resetToken = resetTokenRepo.findByToken(token)
-                .orElseThrow(() -> new RuntimeException("Invalid reset token"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Invalid reset token"));
 
         if (resetToken.getExpiry().isBefore(LocalDateTime.now())) {
             return ResponseEntity.status(HttpStatus.GONE).body("Reset token expired");
         }
 
         User user = userRepo.findByEmail(resetToken.getEmail())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
         user.setPassword(encoder.encode(newPassword));
         userRepo.save(user);
@@ -235,32 +247,24 @@ public class AuthController {
     @PostMapping("/resend-otp")
     @Transactional
     public ResponseEntity<?> resendOtp(@RequestBody ResendOtpRequest req) {
-        Optional<PendingUser> pendingOpt = pendingUserRepo.findByEmail(req.getEmail());
+        PendingUser pending = pendingUserRepo.findByEmail(req.getEmail())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "No pending registration for this email"));
 
-        if (pendingOpt.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("No pending registration for this email");
-        }
-
-        PendingUser pending = pendingOpt.get();
-
-        // Enforce 3-minute resend cooldown
         if (pending.getOtpSentAt() != null && pending.getOtpSentAt().isAfter(LocalDateTime.now().minusMinutes(3))) {
             return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
                     .body("You can request a new OTP only every 3 minutes");
         }
 
-        // Generate new 6-digit OTP securely
         SecureRandom secureRandom = new SecureRandom();
         String newOtp = String.valueOf(100000 + secureRandom.nextInt(900000));
         LocalDateTime now = LocalDateTime.now();
 
-        // Update OTP, expiry, and sent timestamp
         pending.setOtp(newOtp);
         pending.setExpiry(now.plusMinutes(5));
         pending.setOtpSentAt(now);
         pendingUserRepo.save(pending);
 
-        // Send email
         emailService.send(
                 pending.getEmail(),
                 "New OTP for verification",
@@ -278,12 +282,10 @@ public class AuthController {
 
     @GetMapping("/validate-reset-token")
     public ResponseEntity<?> validateResetToken(@RequestParam String token) {
-        Optional<PasswordResetToken> resetTokenOpt = resetTokenRepo.findByToken(token);
-        if (resetTokenOpt.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Invalid token");
-        }
+        PasswordResetToken resetToken = resetTokenRepo.findByToken(token)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Invalid token"));
 
-        if (resetTokenOpt.get().getExpiry().isBefore(LocalDateTime.now())) {
+        if (resetToken.getExpiry().isBefore(LocalDateTime.now())) {
             return ResponseEntity.status(HttpStatus.GONE).body("Token expired");
         }
 
