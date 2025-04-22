@@ -41,17 +41,14 @@ public class AuthController {
             Authentication auth = authManager.authenticate(
                     new UsernamePasswordAuthenticationToken(req.getUsername(), req.getPassword()));
 
-            // Get the authenticated username from the Authentication object
             String username = auth.getName();
 
-            // Lookup actual User object for additional data (e.g., device ID, IP, etc.)
             User user = userRepo.findByUsername(username)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
 
-            // Create a Spring Security compatible UserDetails object
             UserDetails springUser = org.springframework.security.core.userdetails.User.builder()
                     .username(user.getUsername())
-                    .password(user.getPassword()) // This won't be used in the JWT creation but required
+                    .password(user.getPassword())
                     .roles(user.getRole())
                     .build();
 
@@ -81,7 +78,7 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body("Invalid username or password");
         }
-    }   
+    }
 
     @PostMapping("/register")
     @Transactional
