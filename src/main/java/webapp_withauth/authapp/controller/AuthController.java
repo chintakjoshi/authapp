@@ -87,10 +87,11 @@ public class AuthController {
             return ResponseEntity.badRequest().body("Passwords do not match");
         }
 
+        pendingUserRepo.deleteByEmail(request.getEmail());
+
         if (userRepo.existsByUsername(request.getUsername()) || userRepo.existsByEmail(request.getEmail())
-                || pendingUserRepo.existsByUsername(request.getUsername())
-                || pendingUserRepo.existsByEmail(request.getEmail())) {
-            return ResponseEntity.badRequest().body("Username or email already in use");
+                        || pendingUserRepo.existsByUsername(request.getUsername())) {
+                return ResponseEntity.badRequest().body("Username or email already in use");
         }
 
         SecureRandom secureRandom = new SecureRandom();
