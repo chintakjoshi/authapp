@@ -8,6 +8,7 @@ import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.time.Instant;
 import java.util.Date;
 import java.security.Key;
@@ -21,14 +22,24 @@ class JwtServiceTest {
     public JwtServiceTest() {
         jwtService = new JwtService();
         setField(jwtService, "secret", "supersecurelongenoughsecretkey123456");
-        jwtService.checkSecret(); // Ensure init
+        callValidateSecretInternal(jwtService);
     }
 
-    private void setField(Object target, String field, String value) {
+    private void setField(Object target, String fieldName, String value) {
         try {
-            Field declaredField = target.getClass().getDeclaredField(field);
-            declaredField.setAccessible(true);
-            declaredField.set(target, value);
+            Field field = target.getClass().getDeclaredField(fieldName);
+            field.setAccessible(true);
+            field.set(target, value);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private void callValidateSecretInternal(JwtService jwtService) {
+        try {
+            Method method = JwtService.class.getDeclaredMethod("validateSecretInternal");
+            method.setAccessible(true);
+            method.invoke(jwtService);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
