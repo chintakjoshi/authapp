@@ -17,12 +17,12 @@ An authentication app that currently supports token-based authentication and ema
 * Run the following command in the root directory `./mvnw clean package -DskipTests`. This will install dependencies for the spring app. (Note - This command is for Windows)
 * Run `docker-compose up --build -d`, to start the docker containers. (PostgreSQL, spring, react).
 
-### High Level Design
+### High Level Design:
 <div style="display: flex; justify-content: space-between;">
   <img src="./images/hld.png">
 </div>
 
-### Sequence Diagram
+### Sequence Diagram:
 <div style="display: flex; justify-content: space-between;">
   <img src="./images/sequence.png">
 </div>
