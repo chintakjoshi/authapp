@@ -14,6 +14,7 @@ function Protected() {
       .then((res) => setMessage(res.data))
       .catch(() => {
         localStorage.removeItem('token');
+        localStorage.removeItem('refreshToken');
         navigate('/login');
       });
   }, [navigate]);

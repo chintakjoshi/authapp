@@ -27,7 +27,11 @@ export function AuthProvider({ children }) {
                     }
                 });
             } catch (err) {
-                console.warn('Failed to invalidate refresh token on server', err);
+                console.error('Logout error:', {
+                    message: err.message,
+                    status: err.response?.status,
+                    serverMessage: err.response?.data,
+                });
             }
         }
 

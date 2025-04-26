@@ -18,14 +18,14 @@ module.exports = {
         'fade-in': { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
         'fade-in-scale': { '0%': { opacity: '0', transform: 'scale(0.95)' }, '100%': { opacity: '1', transform: 'scale(1)' } },
         'navbar': { '0%': { opacity: '0', transform: 'translateY(-10px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } },
-        'fade-slide-down': {
-          '0%': { opacity: '0', transform: 'translateY(-10px)' }, '100%': { opacity: '1', transform: 'translateY(0)' },
-        },
+        'fade-slide-down': { '0%': { opacity: '0', transform: 'translateY(-10px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } },
+        'fade-slide-up': { '0%': { opacity: 1, transform: 'translateY(0)' }, '100%': { opacity: 0, transform: 'translateY(-10px)' } },
       },
       animation: {
         'fade-in': 'fade-in 0.4s ease-out forwards',
         'fade-in-scale': 'fade-in-scale 0.4s ease-out',
         'fade-slide-down': 'fade-slide-down 0.2s ease-out',
+        'fade-slide-up': 'fade-slide-up 0.2s ease-in forwards',
         'navbar': 'navbar 0.5s ease-out forwards',
       },
     },

@@ -25,12 +25,16 @@ function Navbar() {
         }
     }
 
+    const [isClosing, setIsClosing] = useState(false);
     useEffect(() => {
         if (!isMenuOpen) return;
-
         const handleClickOutside = (event) => {
             if (menuRef.current && !menuRef.current.contains(event.target)) {
-                setIsMenuOpen(false);
+                setIsClosing(true);
+                setTimeout(() => {
+                    setIsMenuOpen(false);
+                    setIsClosing(false);
+                }, 200);
             }
         };
 
@@ -92,7 +96,8 @@ function Navbar() {
             {isMenuOpen && (
                 <div
                     ref={menuRef}
-                    className="md:hidden absolute top-full right-4 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg py-2 z-50 flex flex-col space-y-2 animate-fade-slide-down"
+                    className={`md:hidden absolute top-full right-4 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg py-2 z-50 flex flex-col space-y-2
+    ${isClosing ? 'animate-fade-slide-up' : 'animate-fade-slide-down'}`}
                 >
                     <button
                         onClick={toggleDarkMode}
