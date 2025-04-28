@@ -13,10 +13,10 @@ function Navbar() {
     const menuRef = useRef(null);
 
     const { isAuthenticated, logout } = useAuth();
-    const handleLogout = () => {
+    const handleLogout = async () => {
         setIsLoading(true);
         try {
-            logout();
+            await logout();
             navigate('/login');
         } catch (err) {
             setError('Logout Failed');
