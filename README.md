@@ -11,11 +11,12 @@ An authentication app that currently supports token-based authentication and ema
   
 ## Step 1
 * Rename `.env-sample` to `.env`
-* Insert your credentials in the environment variables
+* Insert your credentials in the environment variables. (To create your credentials, click [here](https://myaccount.google.com/apppasswords)).
 
 ## Step 2
 * Run the following command in the root directory `./mvnw clean package -DskipTests`. This will install dependencies for the spring app. (Note - This command is for Windows)
 * Run `docker-compose up --build -d`, to start the docker containers. (PostgreSQL, spring, react).
+* Access DB `docker exec -it (containerID) psql -U postgres -d authdb`.
 
 ### High Level Design:
 <div style="display: flex; justify-content: space-between;">
