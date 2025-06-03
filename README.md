@@ -1,29 +1,71 @@
-# authapp
-An authentication app that currently supports token-based authentication and email verification by OTP. This application utilizes Spring Boot for the backend, React for the frontend, and PostgreSQL for the Data Store.
+
+# 🔐 AuthApp
+
+A modern authentication application supporting **token-based authentication** and **email verification via OTP**. Built with:
+
+- ⚙️ **Spring Boot** (Backend)
+- 💻 **React** (Frontend)
+- 🗄️ **PostgreSQL** (Database)
 
 [![Authapp CI](https://github.com/chintakjoshi/authapp/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/chintakjoshi/authapp/actions/workflows/tests.yml)
 
-## Prerequisites
-* Java 21.0.6
-* Apache Maven 3.9.9
-* NodeJS v22.14.0
-* Docker
-  
-## Step 1
-* Rename `.env-sample` to `.env`
-* Insert your credentials in the environment variables. (To create your credentials, click [here](https://myaccount.google.com/apppasswords)).
+---
 
-## Step 2
-* Run the following command in the root directory `./mvnw clean package -DskipTests`. This will install dependencies for the spring app. (Note - This command is for Windows)
-* Run `docker-compose up --build -d`, to start the docker containers. (PostgreSQL, spring, react).
-* Access DB `docker exec -it (containerID) psql -U postgres -d authdb`.
+## 🚀 Prerequisites
 
-### High Level Design:
-<div style="display: flex; justify-content: space-between;">
-  <img src="./images/hld.png">
-</div>
+Make sure you have the following installed:
 
-### Sequence Diagram:
-<div style="display: flex; justify-content: space-between;">
-  <img src="./images/sequence.png">
-</div>
+| Tool        | Version     |
+|-------------|-------------|
+| Java        | 21.0.6      |
+| Maven       | 3.9.9       |
+| NodeJS      | v22.14.0    |
+| Docker      | Latest      |
+
+---
+
+## ⚙️ Setup Instructions
+
+### 🔧 Step 1: Configure Environment
+
+1. Rename `.env-sample` to `.env`
+2. Insert your credentials into the environment variables.  
+   👉 To create credentials, [click here](https://myaccount.google.com/apppasswords)
+
+---
+
+### 🏗️ Step 2: Build and Run
+
+```bash
+# Install Spring dependencies (Windows)
+./mvnw clean package -DskipTests
+
+# Start containers (Spring Boot, React, PostgreSQL)
+docker-compose up --build -d
+```
+
+To access the PostgreSQL DB:
+
+```bash
+docker exec -it <container_id> psql -U postgres -d authdb
+```
+
+---
+
+## 🧠 Architecture Overview
+
+### 🗺️ High-Level Design
+
+![High Level Design](./images/hld.png)
+
+---
+
+### 📈 Sequence Diagram
+
+![Sequence Diagram](./images/sequence.png)
+
+---
+
+## 📫 Contact
+
+For any issues or suggestions, please open an issue on the [GitHub repo](https://github.com/chintakjoshi/authapp).
