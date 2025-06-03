@@ -44,7 +44,7 @@ Make sure you have the following installed:
 docker-compose up --build -d
 ```
 
-To access the PostgreSQL DB:
+To access the PostgreSQL DB or use BeekeeperStudio/Postico 2(Recommended):
 
 ```bash
 docker exec -it <container_id> psql -U postgres -d authdb
