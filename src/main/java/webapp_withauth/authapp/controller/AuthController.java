@@ -228,6 +228,7 @@ public class AuthController {
 
         user.setPassword(encoder.encode(newPassword));
         userRepo.save(user);
+        refreshTokenRepo.deleteAllByUsername(user.getUsername());
         resetTokenRepo.deleteByEmail(user.getEmail());
 
         emailService.send(

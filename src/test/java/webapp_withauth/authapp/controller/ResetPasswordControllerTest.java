@@ -12,6 +12,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import webapp_withauth.authapp.model.PasswordResetToken;
 import webapp_withauth.authapp.model.User;
 import webapp_withauth.authapp.repository.PasswordResetTokenRepository;
+import webapp_withauth.authapp.repository.RefreshTokenRepository;
 import webapp_withauth.authapp.repository.UserRepository;
 import webapp_withauth.authapp.service.EmailService;
 
@@ -37,6 +38,9 @@ public class ResetPasswordControllerTest {
     private PasswordResetTokenRepository resetTokenRepository;
 
     @MockBean
+    private RefreshTokenRepository refreshTokenRepository;
+
+    @MockBean
     private UserRepository userRepo;
 
     @MockBean
@@ -59,6 +63,7 @@ public class ResetPasswordControllerTest {
                 .build();
 
         User user = new User();
+        user.setUsername("resetuser");
         user.setEmail(email);
         user.setPassword("oldpassword");
 
@@ -73,6 +78,7 @@ public class ResetPasswordControllerTest {
                 .andExpect(status().isOk());
 
         verify(userRepo).save(user);
+        verify(refreshTokenRepository).deleteAllByUsername("resetuser");
         verify(resetTokenRepository).deleteByEmail(email);
         verify(emailService).send(eq(email), any(), contains("Your password was successfully reset"));
     }
