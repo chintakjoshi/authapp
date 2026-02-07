@@ -100,6 +100,30 @@ describe('pages/VerifyOtp.js', () => {
         jest.useRealTimers();
     });
 
+    it('restores resend cooldown after re-entering the page', () => {
+        jest.useFakeTimers();
+        localStorage.setItem('pendingEmail', 'test@example.com');
+        localStorage.setItem(
+            'verifyOtpCooldown',
+            JSON.stringify({
+                email: 'test@example.com',
+                expiresAt: Date.now() + 60000,
+            })
+        );
+
+        const { unmount } = renderWithRoute(<VerifyOtp />);
+        expect(screen.getByRole('button', { name: /resend otp \(60s\)/i })).toBeDisabled();
+
+        act(() => {
+            jest.advanceTimersByTime(2000);
+        });
+        unmount();
+
+        renderWithRoute(<VerifyOtp />);
+        expect(screen.getByRole('button', { name: /resend otp \(58s\)/i })).toBeDisabled();
+        jest.useRealTimers();
+    });
+
     it('disables buttons during loading', async () => {
         localStorage.setItem('pendingEmail', 'test@example.com');
         axios.post.mockImplementation(() => new Promise(resolve => setTimeout(resolve, 1000)));

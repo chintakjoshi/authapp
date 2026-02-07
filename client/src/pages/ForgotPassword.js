@@ -5,13 +5,37 @@ import AuthCard from '../components/AuthCard';
 import AnimatedPage from '../components/AnimatedPage';
 import { Loader2 } from 'lucide-react';
 
+const COOLDOWN_SECONDS = 180;
+const COOLDOWN_STORAGE_KEY = 'forgotPasswordCooldownUntil';
+
+const getRemainingSeconds = (expiresAt) => {
+  if (!Number.isFinite(expiresAt)) return 0;
+  return Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000));
+};
+
 function ForgotPassword() {
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('success');
+  const [cooldownExpiresAt, setCooldownExpiresAt] = useState(null);
   const [cooldown, setCooldown] = useState(0);
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    const storedValue = localStorage.getItem(COOLDOWN_STORAGE_KEY);
+    if (!storedValue) return;
+    const expiresAt = Number(storedValue);
+    if (!Number.isFinite(expiresAt)) {
+      localStorage.removeItem(COOLDOWN_STORAGE_KEY);
+      return;
+    }
+    if (expiresAt <= Date.now()) {
+      localStorage.removeItem(COOLDOWN_STORAGE_KEY);
+      return;
+    }
+    setCooldownExpiresAt(expiresAt);
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -22,7 +46,9 @@ function ForgotPassword() {
       });
       setMessage(res.data || 'If the email exists, a reset link has been sent.');
       setMessageType('success');
-      setCooldown(180);
+      const expiresAt = Date.now() + COOLDOWN_SECONDS * 1000;
+      localStorage.setItem(COOLDOWN_STORAGE_KEY, String(expiresAt));
+      setCooldownExpiresAt(expiresAt);
     } catch (err) {
       const status = err.response?.status;
       setMessage(
@@ -37,12 +63,24 @@ function ForgotPassword() {
   };
 
   useEffect(() => {
-    if (cooldown === 0) return;
-    const interval = setInterval(() => {
-      setCooldown((prev) => prev - 1);
-    }, 1000);
+    if (!cooldownExpiresAt) {
+      setCooldown(0);
+      return;
+    }
+
+    const updateCooldown = () => {
+      const remainingSeconds = getRemainingSeconds(cooldownExpiresAt);
+      setCooldown(remainingSeconds);
+      if (remainingSeconds === 0) {
+        localStorage.removeItem(COOLDOWN_STORAGE_KEY);
+        setCooldownExpiresAt(null);
+      }
+    };
+
+    updateCooldown();
+    const interval = setInterval(updateCooldown, 1000);
     return () => clearInterval(interval);
-  }, [cooldown]);
+  }, [cooldownExpiresAt]);
 
   return (
     <AnimatedPage>

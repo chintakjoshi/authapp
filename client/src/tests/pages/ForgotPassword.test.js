@@ -138,4 +138,20 @@ describe('pages/ForgotPassword.js', () => {
 
         expect(await screen.findByText(/send reset again \(177s\)/i)).toBeInTheDocument();
     });
+
+    it('restores cooldown after re-entering the page', () => {
+        const expiresAt = Date.now() + 60000;
+        localStorage.setItem('forgotPasswordCooldownUntil', String(expiresAt));
+
+        const { unmount } = renderWithRouter(<ForgotPassword />);
+        expect(screen.getByRole('button', { name: /send reset again \(60s\)/i })).toBeDisabled();
+
+        act(() => {
+            jest.advanceTimersByTime(2000);
+        });
+        unmount();
+
+        renderWithRouter(<ForgotPassword />);
+        expect(screen.getByRole('button', { name: /send reset again \(58s\)/i })).toBeDisabled();
+    });
 });

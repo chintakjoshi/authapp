@@ -5,14 +5,43 @@ import AuthCard from '../components/AuthCard';
 import AnimatedPage from '../components/AnimatedPage';
 import { Loader2 } from 'lucide-react';
 
+const COOLDOWN_SECONDS = 180;
+const COOLDOWN_STORAGE_KEY = 'verifyOtpCooldown';
+
+const getRemainingSeconds = (expiresAt) => {
+    if (!Number.isFinite(expiresAt)) return 0;
+    return Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000));
+};
+
 function VerifyOtp() {
     const [otp, setOtp] = useState('');
     const [error, setError] = useState('');
     const [message, setMessage] = useState('');
+    const [cooldownExpiresAt, setCooldownExpiresAt] = useState(null);
     const [cooldown, setCooldown] = useState(0);
     const navigate = useNavigate();
     const email = localStorage.getItem('pendingEmail');
     const [isLoading, setIsLoading] = useState(false);
+
+    useEffect(() => {
+        if (!email) return;
+
+        const storedValue = localStorage.getItem(COOLDOWN_STORAGE_KEY);
+        if (!storedValue) return;
+
+        try {
+            const parsed = JSON.parse(storedValue);
+            const expiresAt = Number(parsed?.expiresAt);
+            const storedEmail = parsed?.email;
+            if (storedEmail !== email || !Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
+                localStorage.removeItem(COOLDOWN_STORAGE_KEY);
+                return;
+            }
+            setCooldownExpiresAt(expiresAt);
+        } catch {
+            localStorage.removeItem(COOLDOWN_STORAGE_KEY);
+        }
+    }, [email]);
 
     const handleVerify = async (e) => {
         e.preventDefault();
@@ -20,9 +49,10 @@ function VerifyOtp() {
         try {
             const params = new URLSearchParams({ email, otp });
             await axios.post(`/auth/verify?${params.toString()}`);
-            setMessage('✅ Your account is verified! Redirecting...');
+            setMessage('Your account is verified! Redirecting...');
             setTimeout(() => {
                 localStorage.removeItem('pendingEmail');
+                localStorage.removeItem(COOLDOWN_STORAGE_KEY);
                 navigate('/login');
             }, 2000);
         } catch (err) {
@@ -36,9 +66,11 @@ function VerifyOtp() {
         setIsLoading(true);
         try {
             await axios.post('/auth/resend-otp', { email });
-            setMessage('📨 A new OTP has been sent to your email.');
+            setMessage('A new OTP has been sent to your email.');
             setError('');
-            setCooldown(180);
+            const expiresAt = Date.now() + COOLDOWN_SECONDS * 1000;
+            localStorage.setItem(COOLDOWN_STORAGE_KEY, JSON.stringify({ email, expiresAt }));
+            setCooldownExpiresAt(expiresAt);
         } catch (err) {
             setError(err.response?.data || 'Unable to resend OTP.');
         } finally {
@@ -47,10 +79,24 @@ function VerifyOtp() {
     };
 
     useEffect(() => {
-        if (cooldown === 0) return;
-        const interval = setInterval(() => setCooldown((prev) => prev - 1), 1000);
+        if (!cooldownExpiresAt) {
+            setCooldown(0);
+            return;
+        }
+
+        const updateCooldown = () => {
+            const remainingSeconds = getRemainingSeconds(cooldownExpiresAt);
+            setCooldown(remainingSeconds);
+            if (remainingSeconds === 0) {
+                localStorage.removeItem(COOLDOWN_STORAGE_KEY);
+                setCooldownExpiresAt(null);
+            }
+        };
+
+        updateCooldown();
+        const interval = setInterval(updateCooldown, 1000);
         return () => clearInterval(interval);
-    }, [cooldown]);
+    }, [cooldownExpiresAt]);
 
     if (!email) {
         return (
