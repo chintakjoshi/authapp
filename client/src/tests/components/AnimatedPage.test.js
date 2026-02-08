@@ -7,9 +7,7 @@ describe('components/AnimatedPage.js', () => {
         const { container } = render(<AnimatedPage>Test Content</AnimatedPage>);
 
         const wrapperDiv = container.firstChild;
-        expect(wrapperDiv).toHaveClass('animate-fade-in');
-        expect(wrapperDiv).toHaveClass('opacity-0');
-        expect(wrapperDiv).toHaveClass('animate-[fade-in_0.4s_ease-out_forwards]');
+        expect(wrapperDiv).toHaveClass('animate-[fade-in-scale_320ms_ease-out]');
     });
 
     it('renders children correctly', () => {

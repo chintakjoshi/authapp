@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import AuthCard from '../components/AuthCard';
 import AnimatedPage from '../components/AnimatedPage';
-import { Loader2 } from 'lucide-react';
+import { ArrowRight, KeyRound, Loader2, User } from 'lucide-react';
 
 function getDeviceId() {
   let id = localStorage.getItem('deviceId');
@@ -45,17 +45,21 @@ function Login() {
     <AnimatedPage>
       <AuthCard
         title="Login"
+        badge="Returning User"
+        headline="Welcome back. Continue where you left off."
+        description="Sign in with your secure credentials and manage your account with a refreshed interface."
+        points={['Fast sign-in', 'Smart token refresh', 'Accessible form controls']}
         bottomContent={(
-          <div className="flex flex-col sm:flex-row sm:justify-between gap-3 text-sm text-center">
+          <div className="flex flex-col gap-3 text-sm text-center sm:flex-row sm:justify-between">
             <button
               onClick={() => navigate('/register')}
-              className="text-blue-500 dark:text-blue-400 hover:underline transition"
+              className="ui-link"
             >
               Register
             </button>
             <button
               onClick={() => navigate('/forgot-password')}
-              className="text-blue-500 dark:text-blue-400 hover:underline transition"
+              className="ui-link"
             >
               Forgot Password?
             </button>
@@ -63,29 +67,42 @@ function Login() {
         )}
       >
         {error && (
-          <p className="text-red-500 mb-4 text-sm text-center">{error}</p>
+          <p role="alert" className="ui-alert ui-alert-error mb-4 text-center">{error}</p>
         )}
         <form onSubmit={handleLogin} className="space-y-4">
-          <input
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            placeholder="Username"
-            required
-            className="w-full px-4 py-2 border rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400"
-          />
-          <input
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            type="password"
-            placeholder="Password"
-            required
-            className="w-full px-4 py-2 border rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400"
-          />
+          <label className="block space-y-2">
+            <span className="text-sm font-medium text-[var(--text-primary)]">Username</span>
+            <span className="relative block">
+              <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-secondary)]" />
+              <input
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Username"
+                required
+                className="ui-input pl-10"
+              />
+            </span>
+          </label>
+
+          <label className="block space-y-2">
+            <span className="text-sm font-medium text-[var(--text-primary)]">Password</span>
+            <span className="relative block">
+              <KeyRound className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-secondary)]" />
+              <input
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                type="password"
+                placeholder="Password"
+                required
+                className="ui-input pl-10"
+              />
+            </span>
+          </label>
+
           <button
             type="submit"
             disabled={isLoading}
-            className={`w-full flex justify-center items-center gap-2 bg-blue-500 text-white py-2 rounded-md hover:bg-blue-600 transition-colors ${isLoading ? 'opacity-60 cursor-not-allowed' : ''
-              }`}
+            className="ui-button"
           >
             {isLoading ? (
               <>
@@ -93,7 +110,10 @@ function Login() {
                 Logging In...
               </>
             ) : (
-              'Login'
+              <>
+                Login
+                <ArrowRight className="h-4 w-4" />
+              </>
             )}
           </button>
         </form>

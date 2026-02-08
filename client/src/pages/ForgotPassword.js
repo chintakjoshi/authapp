@@ -3,7 +3,7 @@ import axios from '../api/axios';
 import { useNavigate } from 'react-router-dom';
 import AuthCard from '../components/AuthCard';
 import AnimatedPage from '../components/AnimatedPage';
-import { Loader2 } from 'lucide-react';
+import { ArrowRight, Loader2, Mail } from 'lucide-react';
 
 const COOLDOWN_SECONDS = 180;
 const COOLDOWN_STORAGE_KEY = 'forgotPasswordCooldownUntil';
@@ -86,10 +86,14 @@ function ForgotPassword() {
     <AnimatedPage>
       <AuthCard
         title="Forgot Password"
+        badge="Recovery"
+        headline="Regain account access safely."
+        description="Request a reset link and set a new password through your verified inbox."
+        points={['Rate-limited requests', 'Clear success/error feedback', 'No backend changes required']}
         bottomContent={(
           <button
             onClick={() => navigate('/login')}
-            className="text-brand-light dark:text-brand-dark hover:underline transition"
+            className="ui-link"
           >
             Back to Login
           </button>
@@ -97,31 +101,34 @@ function ForgotPassword() {
       >
         {message && (
           <p
-            className={`mb-4 text-sm text-center ${messageType === 'error'
-              ? 'text-red-500 dark:text-red-400'
-              : 'text-green-500 dark:text-green-400'
+            role="status"
+            className={`ui-alert mb-4 text-center ${messageType === 'error'
+              ? 'ui-alert-error'
+              : 'ui-alert-success'
               }`}
           >
             {message}
           </p>
         )}
         <form onSubmit={handleSubmit} className="space-y-4">
-          <input
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="Enter your email"
-            type="email"
-            required
-            className="w-full px-4 py-2 border rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400"
-          />
+          <label className="block space-y-2">
+            <span className="text-sm font-medium text-[var(--text-primary)]">Email Address</span>
+            <span className="relative block">
+              <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-secondary)]" />
+              <input
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Enter your email"
+                type="email"
+                required
+                className="ui-input pl-10"
+              />
+            </span>
+          </label>
           <button
             type="submit"
             disabled={isLoading || cooldown > 0}
-            className={`w-full flex justify-center items-center gap-2 py-2 rounded-md transition-colors
-    ${isLoading || cooldown > 0
-                ? 'bg-blue-500 text-white opacity-60 cursor-not-allowed'
-                : 'bg-blue-500 text-white hover:bg-blue-600'
-              }`}
+            className="ui-button"
           >
             {isLoading ? (
               <>
@@ -131,7 +138,10 @@ function ForgotPassword() {
             ) : cooldown > 0 ? (
               `Send Reset Again (${cooldown}s)`
             ) : (
-              'Send Reset Link'
+              <>
+                Send Reset Link
+                <ArrowRight className="h-4 w-4" />
+              </>
             )}
           </button>
         </form>

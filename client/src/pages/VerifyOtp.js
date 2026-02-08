@@ -3,7 +3,7 @@ import axios from '../api/axios';
 import { useNavigate } from 'react-router-dom';
 import AuthCard from '../components/AuthCard';
 import AnimatedPage from '../components/AnimatedPage';
-import { Loader2 } from 'lucide-react';
+import { ArrowRight, Loader2, RefreshCw, ShieldCheck } from 'lucide-react';
 
 const COOLDOWN_SECONDS = 180;
 const COOLDOWN_STORAGE_KEY = 'verifyOtpCooldown';
@@ -103,12 +103,12 @@ function VerifyOtp() {
             <AuthCard title="No Pending Registration" bottomContent={(
                 <button
                     onClick={() => navigate('/register')}
-                    className="text-blue-500 hover:underline text-sm"
+                    className="ui-link text-sm"
                 >
                     Back to Register
                 </button>
             )}>
-                <p className="text-center text-gray-600 dark:text-gray-400">
+                <p className="text-center text-sm text-[var(--text-secondary)]">
                     You don't have a pending email verification.
                 </p>
             </AuthCard>
@@ -119,32 +119,40 @@ function VerifyOtp() {
         <AnimatedPage>
             <AuthCard
                 title="Verify Your Email"
+                badge="Verification"
+                headline="Confirm your email and activate your account."
+                description="Enter the OTP sent to your inbox. Need a new one? Resend with cooldown protection."
+                points={['Secure one-time code flow', 'Resend cooldown persistence', 'Smooth redirect after success']}
                 bottomContent={(
                     <button
                         onClick={() => navigate('/register')}
-                        className="text-blue-500 hover:underline text-sm"
+                        className="ui-link text-sm"
                     >
                         Back to Register
                     </button>
                 )}
             >
-                {error && <p className="text-red-500 mb-4 text-sm text-center">{error}</p>}
-                {message && <p className="text-green-500 mb-4 text-sm text-center">{message}</p>}
+                {error && <p role="alert" className="ui-alert ui-alert-error mb-4 text-center">{error}</p>}
+                {message && <p role="status" className="ui-alert ui-alert-success mb-4 text-center">{message}</p>}
                 <form onSubmit={handleVerify} className="space-y-4">
-                    <input
-                        value={otp}
-                        onChange={(e) => setOtp(e.target.value)}
-                        placeholder="Enter 6-digit OTP"
-                        required
-                        className="w-full px-4 py-2 border rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 text-center"
-                    />
+                    <label className="block space-y-2">
+                        <span className="text-sm font-medium text-[var(--text-primary)]">Verification Code</span>
+                        <span className="relative block">
+                            <ShieldCheck className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-secondary)]" />
+                            <input
+                                value={otp}
+                                onChange={(e) => setOtp(e.target.value)}
+                                placeholder="Enter 6-digit OTP"
+                                required
+                                className="ui-input pl-10 text-center tracking-[0.2em]"
+                            />
+                        </span>
+                    </label>
                     {/* Verify Button */}
                     <button
                         type="submit"
                         disabled={isLoading}
-                        className={`w-full flex justify-center items-center gap-2 bg-blue-500 text-white py-2 rounded-md hover:bg-blue-600 transition-colors
-    ${isLoading ? 'opacity-60 cursor-not-allowed' : ''}
-  `}
+                        className="ui-button"
                     >
                         {isLoading ? (
                             <>
@@ -152,7 +160,10 @@ function VerifyOtp() {
                                 Verifying...
                             </>
                         ) : (
-                            'Verify'
+                            <>
+                                Verify
+                                <ArrowRight className="h-4 w-4" />
+                            </>
                         )}
                     </button>
 
@@ -161,11 +172,7 @@ function VerifyOtp() {
                         type="button"
                         onClick={handleResend}
                         disabled={isLoading || cooldown > 0}
-                        className={`w-full flex justify-center items-center gap-2 py-2 rounded-md mt-2 transition-colors
-    ${isLoading || cooldown > 0
-                                ? 'bg-blue-500 text-white opacity-60 cursor-not-allowed'
-                                : 'bg-blue-500 text-white hover:bg-blue-600'
-                            }`}
+                        className="ui-button !bg-[linear-gradient(140deg,#0d9488,#0f766e)] mt-2"
                     >
                         {isLoading ? (
                             <>
@@ -175,7 +182,10 @@ function VerifyOtp() {
                         ) : cooldown > 0 ? (
                             `Resend OTP (${cooldown}s)`
                         ) : (
-                            'Resend OTP'
+                            <>
+                                <RefreshCw className="h-4 w-4" />
+                                Resend OTP
+                            </>
                         )}
                     </button>
                 </form>

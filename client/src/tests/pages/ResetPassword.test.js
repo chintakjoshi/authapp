@@ -41,6 +41,22 @@ describe('pages/ResetPassword.js', () => {
         });
     });
 
+    it('shows live password strength and match status', async () => {
+        axios.get.mockResolvedValueOnce({});
+
+        renderWithRoute(<ResetPassword />, '/reset-password?token=valid-token');
+
+        expect(await screen.findByRole('heading', { name: /reset password/i })).toBeInTheDocument();
+
+        fireEvent.change(screen.getByPlaceholderText(/new password/i), { target: { value: 'Password1!' } });
+        expect(screen.getByText(/strength/i)).toBeInTheDocument();
+        expect(screen.getByText(/strong enough:/i)).toBeInTheDocument();
+        expect(screen.getByText('Strong')).toBeInTheDocument();
+
+        fireEvent.change(screen.getByPlaceholderText(/confirm password/i), { target: { value: 'Password1!' } });
+        expect(screen.getByText(/passwords match/i)).toBeInTheDocument();
+    });
+
     it('shows error if validate-reset-token fails', async () => {
         axios.get.mockRejectedValueOnce({ response: { data: 'Invalid token' } });
 
@@ -61,7 +77,8 @@ describe('pages/ResetPassword.js', () => {
 
         fireEvent.click(screen.getByRole('button', { name: /reset password/i }));
 
-        expect(await screen.findByText(/passwords do not match/i)).toBeInTheDocument();
+        const mismatchMessages = await screen.findAllByText(/passwords do not match/i);
+        expect(mismatchMessages.length).toBeGreaterThan(0);
     });
 
     it('calls /auth/reset-password API and redirects on success', async () => {
