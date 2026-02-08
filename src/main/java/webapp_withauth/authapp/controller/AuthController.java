@@ -218,8 +218,12 @@ public class AuthController {
 
     @PostMapping("/reset-password")
     @Transactional
-    public ResponseEntity<?> resetPassword(@RequestParam String token, @RequestParam String newPassword) {
-        PasswordResetToken resetToken = resetTokenRepo.findByToken(token)
+    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest req) {
+        if (req.getToken() == null || req.getToken().isBlank() || req.getNewPassword() == null || req.getNewPassword().isBlank()) {
+            return ResponseEntity.badRequest().body("Token and newPassword are required");
+        }
+
+        PasswordResetToken resetToken = resetTokenRepo.findByToken(req.getToken())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Invalid reset token"));
 
         if (resetToken.getExpiry().isBefore(LocalDateTime.now())) {
@@ -229,7 +233,7 @@ public class AuthController {
         User user = userRepo.findByEmail(resetToken.getEmail())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
-        user.setPassword(encoder.encode(newPassword));
+        user.setPassword(encoder.encode(req.getNewPassword()));
         userRepo.save(user);
         refreshTokenRepo.deleteAllByUsername(user.getUsername());
         resetTokenRepo.deleteByEmail(user.getEmail());

@@ -58,9 +58,7 @@ function ResetPassword() {
     }
 
     try {
-      const res = await axios.post('/auth/reset-password', null, {
-        params: { token, newPassword },
-      });
+      const res = await axios.post('/auth/reset-password', { token, newPassword });
       setMessageType('success');
       setMessage(res.data || 'Password has been reset.');
       setTimeout(() => navigate('/login'), 2000);
