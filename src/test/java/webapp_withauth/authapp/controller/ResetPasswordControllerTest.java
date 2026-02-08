@@ -1,5 +1,6 @@
 package webapp_withauth.authapp.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -17,6 +18,7 @@ import webapp_withauth.authapp.repository.UserRepository;
 import webapp_withauth.authapp.service.EmailService;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -33,6 +35,9 @@ public class ResetPasswordControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @MockBean
     private PasswordResetTokenRepository resetTokenRepository;
@@ -72,9 +77,10 @@ public class ResetPasswordControllerTest {
         when(encoder.encode(newPassword)).thenReturn("encodedNewPassword");
 
         mockMvc.perform(post("/auth/reset-password")
-                .param("token", token)
-                .param("newPassword", newPassword)
-                .contentType(MediaType.APPLICATION_FORM_URLENCODED))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(Map.of(
+                        "token", token,
+                        "newPassword", newPassword))))
                 .andExpect(status().isOk());
 
         verify(userRepo).save(user);
@@ -96,9 +102,10 @@ public class ResetPasswordControllerTest {
         when(resetTokenRepository.findByToken(token)).thenReturn(Optional.of(resetToken));
 
         mockMvc.perform(post("/auth/reset-password")
-                .param("token", token)
-                .param("newPassword", "irrelevant")
-                .contentType(MediaType.APPLICATION_FORM_URLENCODED))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(Map.of(
+                        "token", token,
+                        "newPassword", "irrelevant"))))
                 .andExpect(status().isGone());
     }
 
@@ -116,9 +123,10 @@ public class ResetPasswordControllerTest {
         when(userRepo.findByEmail(resetToken.getEmail())).thenReturn(Optional.empty());
 
         mockMvc.perform(post("/auth/reset-password")
-                .param("token", token)
-                .param("newPassword", "doesnotmatter")
-                .contentType(MediaType.APPLICATION_FORM_URLENCODED))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(Map.of(
+                        "token", token,
+                        "newPassword", "doesnotmatter"))))
                 .andExpect(status().isNotFound());
     }
 
@@ -128,9 +136,18 @@ public class ResetPasswordControllerTest {
         when(resetTokenRepository.findByToken("invalid")).thenReturn(Optional.empty());
 
         mockMvc.perform(post("/auth/reset-password")
-                .param("token", "invalid")
-                .param("newPassword", "somepass")
-                .contentType(MediaType.APPLICATION_FORM_URLENCODED))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(Map.of(
+                        "token", "invalid",
+                        "newPassword", "somepass"))))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void resetPassword_missingFields_returns400() throws Exception {
+        mockMvc.perform(post("/auth/reset-password")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(Map.of("token", "some-token"))))
+                .andExpect(status().isBadRequest());
     }
 }

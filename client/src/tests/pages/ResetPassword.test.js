@@ -96,6 +96,10 @@ describe('pages/ResetPassword.js', () => {
             fireEvent.click(screen.getByRole('button', { name: /reset password/i }));
         });
 
+        expect(axios.post).toHaveBeenCalledWith('/auth/reset-password', {
+            token: 'valid-token',
+            newPassword: 'newpass',
+        });
         expect(await screen.findByText(/password reset successfully/i)).toBeInTheDocument();
     });
 
