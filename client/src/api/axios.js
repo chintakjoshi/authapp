@@ -52,7 +52,11 @@ instance.interceptors.response.use(
         });
 
         const newAccessToken = refreshResponse.data.accessToken;
+        const newRefreshToken = refreshResponse.data.refreshToken;
         localStorage.setItem('token', newAccessToken);
+        if (newRefreshToken) {
+          localStorage.setItem('refreshToken', newRefreshToken);
+        }
 
         // Retry original request with new token
         originalRequest.headers['Authorization'] = `Bearer ${newAccessToken}`;

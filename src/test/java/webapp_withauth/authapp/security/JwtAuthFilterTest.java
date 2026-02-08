@@ -65,7 +65,7 @@ public class JwtAuthFilterTest {
         String token = generateToken(15 * 60 * 1000);
         when(userDetailsService.loadUserByUsername("testuser")).thenReturn(user);
         doReturn("testuser").when(jwtService).extractUsername(token);
-        doReturn(true).when(jwtService).isTokenValid(eq(token), any());
+        doReturn(true).when(jwtService).isTokenValid(eq(token), any(), eq(JwtService.ACCESS_TOKEN_TYPE));
 
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.addHeader("Authorization", "Bearer " + token);
@@ -95,7 +95,7 @@ public class JwtAuthFilterTest {
     void expiredToken_noAuthentication() throws Exception {
         String token = generateToken(-1000);
         doReturn("testuser").when(jwtService).extractUsername(token);
-        doReturn(false).when(jwtService).isTokenValid(eq(token), any());
+        doReturn(false).when(jwtService).isTokenValid(eq(token), any(), eq(JwtService.ACCESS_TOKEN_TYPE));
 
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.addHeader("Authorization", "Bearer " + token);

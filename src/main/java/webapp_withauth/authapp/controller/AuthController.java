@@ -1,5 +1,6 @@
 package webapp_withauth.authapp.controller;
 
+import io.jsonwebtoken.JwtException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.*;
 import org.springframework.security.authentication.*;
@@ -60,18 +61,7 @@ public class AuthController {
                         .body("Failed to generate refresh token");
             }
 
-            String ip = Optional.ofNullable(request.getHeader("X-Forwarded-For"))
-                    .orElseGet(request::getRemoteAddr);
-
-            refreshTokenRepo.save(RefreshToken.builder()
-                    .username(user.getUsername())
-                    .token(refreshToken)
-                    .expiry(LocalDateTime.now().plusDays(7))
-                    .revoked(false)
-                    .ip(ip)
-                    .userAgent(request.getHeader("User-Agent"))
-                    .deviceId(req.getDeviceId())
-                    .build());
+            storeRefreshToken(user.getUsername(), refreshToken, req.getDeviceId(), request);
 
             return ResponseEntity.ok(new AuthResponse(accessToken, refreshToken));
         } catch (AuthenticationException e) {
@@ -117,16 +107,22 @@ public class AuthController {
     }
 
     @PostMapping("/refresh")
+    @Transactional
     public ResponseEntity<?> refresh(@RequestBody RefreshRequest req, HttpServletRequest request) {
         String refreshToken = req.getRefreshToken();
-        String username = jwtService.extractUsername(refreshToken);
+        String username;
+        try {
+            username = jwtService.extractUsername(refreshToken);
+        } catch (JwtException | IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid refresh token");
+        }
 
         RefreshToken stored = refreshTokenRepo.findByToken(refreshToken)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Refresh token not found"));
 
         if (stored.isRevoked()
                 || stored.getExpiry().isBefore(LocalDateTime.now())
-                || !stored.getDeviceId().equals(req.getDeviceId())) {
+                || !Objects.equals(stored.getDeviceId(), req.getDeviceId())) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid device context");
         }
 
@@ -139,12 +135,19 @@ public class AuthController {
                 .roles(user.getRole())
                 .build();
 
-        if (!jwtService.isTokenValid(refreshToken, springUser)) {
+        if (!jwtService.isTokenValid(refreshToken, springUser, JwtService.REFRESH_TOKEN_TYPE)) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid refresh token");
         }
 
         String newAccessToken = jwtService.generateAccessToken(springUser);
-        return ResponseEntity.ok(Map.of("accessToken", newAccessToken));
+        String newRefreshToken = jwtService.generateRefreshToken(springUser);
+
+        refreshTokenRepo.deleteByToken(refreshToken);
+        storeRefreshToken(user.getUsername(), newRefreshToken, req.getDeviceId(), request);
+
+        return ResponseEntity.ok(Map.of(
+                "accessToken", newAccessToken,
+                "refreshToken", newRefreshToken));
     }
 
     @PostMapping("/verify")
@@ -292,5 +295,20 @@ public class AuthController {
         }
 
         return ResponseEntity.ok("Token is valid");
+    }
+
+    private void storeRefreshToken(String username, String refreshToken, String deviceId, HttpServletRequest request) {
+        String ip = Optional.ofNullable(request.getHeader("X-Forwarded-For"))
+                .orElseGet(request::getRemoteAddr);
+
+        refreshTokenRepo.save(RefreshToken.builder()
+                .username(username)
+                .token(refreshToken)
+                .expiry(LocalDateTime.now().plusDays(7))
+                .revoked(false)
+                .ip(ip)
+                .userAgent(request.getHeader("User-Agent"))
+                .deviceId(deviceId)
+                .build());
     }
 }
