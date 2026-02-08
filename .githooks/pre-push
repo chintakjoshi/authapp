@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if ! command -v node >/dev/null 2>&1; then
+  echo "Node.js is required to run pre-push checks."
+  exit 1
+fi
+
+node scripts/hooks/pre-push-checks.mjs

@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if ! command -v node >/dev/null 2>&1; then
+  echo "Node.js is required to run pre-commit checks."
+  exit 1
+fi
+
+node scripts/hooks/fix-whitespace.mjs
+node scripts/hooks/scan-secrets.mjs --staged
+node scripts/hooks/run-eslint-on-staged.mjs

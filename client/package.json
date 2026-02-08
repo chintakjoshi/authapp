@@ -20,6 +20,8 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
+    "lint": "npx --no-install eslint --max-warnings=0 \"src/**/*.{js,jsx}\" --ignore-pattern \"src/tests/**\" --ignore-pattern \"src/**/*.test.{js,jsx}\"",
+    "lint:fix": "npx --no-install eslint \"src/**/*.{js,jsx}\" --fix --ignore-pattern \"src/tests/**\" --ignore-pattern \"src/**/*.test.{js,jsx}\"",
     "eject": "react-scripts eject"
   },
   "eslintConfig": {
