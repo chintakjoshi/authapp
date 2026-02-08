@@ -18,6 +18,19 @@ describe('contexts/DarkModeContext.js', () => {
         document.documentElement.className = '';
         localStorage.clear();
         jest.clearAllMocks();
+        Object.defineProperty(window, 'matchMedia', {
+            writable: true,
+            value: jest.fn().mockImplementation((query) => ({
+                matches: false,
+                media: query,
+                onchange: null,
+                addListener: jest.fn(),
+                removeListener: jest.fn(),
+                addEventListener: jest.fn(),
+                removeEventListener: jest.fn(),
+                dispatchEvent: jest.fn(),
+            })),
+        });
     });
 
     it('loads stored theme from localStorage on mount', () => {

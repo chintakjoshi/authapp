@@ -3,7 +3,8 @@ import axios from '../api/axios';
 import { useNavigate } from 'react-router-dom';
 import AuthCard from '../components/AuthCard';
 import AnimatedPage from '../components/AnimatedPage';
-import { Loader2 } from 'lucide-react';
+import { ArrowRight, CheckCircle2, Loader2, Mail, ShieldCheck, User, XCircle } from 'lucide-react';
+import { evaluatePasswordStrength } from '../utils/passwordStrength';
 
 function Register() {
   const [form, setForm] = useState({
@@ -15,6 +16,18 @@ function Register() {
   const [error, setError] = useState('');
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
+  const passwordEvaluation = evaluatePasswordStrength(form.password);
+  const isPasswordTouched = form.password.length > 0;
+  const hasConfirmValue = form.confirmPassword.length > 0;
+  const isMatch = hasConfirmValue && form.password === form.confirmPassword;
+
+  const strengthTone = {
+    'Very Weak': 'text-red-600 dark:text-red-400',
+    Weak: 'text-red-600 dark:text-red-400',
+    Fair: 'text-amber-600 dark:text-amber-300',
+    Good: 'text-sky-600 dark:text-sky-300',
+    Strong: 'text-emerald-600 dark:text-emerald-300',
+  }[passwordEvaluation.label];
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -26,6 +39,7 @@ function Register() {
     setError('');
     if (form.password !== form.confirmPassword) {
       setError('Passwords do not match');
+      setIsLoading(false);
       return;
     }
     try {
@@ -43,45 +57,122 @@ function Register() {
     <AnimatedPage>
       <AuthCard
         title="Register"
+        badge="New Account"
+        headline="Create your secure account in a minute."
+        description="Set your credentials and verify your email to unlock protected app features."
+        points={['Email verification flow', 'Clear validation states', 'Safe credential setup']}
         bottomContent={(
-          <button onClick={() => navigate('/login')} className="text-brand-light dark:text-brand-dark hover:underline transition">
+          <button onClick={() => navigate('/login')} className="ui-link">
             Back to Login
           </button>
         )}
       >
-        {error && <p className="text-red-500 mb-4 text-sm text-center">{error}</p>}
+        {error && <p role="alert" className="ui-alert ui-alert-error mb-4 text-center">{error}</p>}
         <form onSubmit={handleSubmit} className="space-y-4">
-          {['email', 'username'].map((field) => (
-            <input
-              key={field}
-              name={field}
-              placeholder={field.charAt(0).toUpperCase() + field.slice(1)}
-              onChange={handleChange}
-              required
-              className="w-full px-4 py-2 border rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400"
-            />
-          ))}
-          <input
-            type="password"
-            name="password"
-            placeholder="Password"
-            onChange={handleChange}
-            required
-            className="w-full px-4 py-2 border rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400"
-          />
-          <input
-            type="password"
-            name="confirmPassword"
-            placeholder="Confirm Password"
-            onChange={handleChange}
-            required
-            className="w-full px-4 py-2 border rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400"
-          />
+          <label className="block space-y-2">
+            <span className="text-sm font-medium text-[var(--text-primary)]">Email</span>
+            <span className="relative block">
+              <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-secondary)]" />
+              <input
+                name="email"
+                placeholder="Email"
+                onChange={handleChange}
+                required
+                className="ui-input pl-10"
+              />
+            </span>
+          </label>
+
+          <label className="block space-y-2">
+            <span className="text-sm font-medium text-[var(--text-primary)]">Username</span>
+            <span className="relative block">
+              <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-secondary)]" />
+              <input
+                name="username"
+                placeholder="Username"
+                onChange={handleChange}
+                required
+                className="ui-input pl-10"
+              />
+            </span>
+          </label>
+
+          <label className="block space-y-2">
+            <span className="text-sm font-medium text-[var(--text-primary)]">Password</span>
+            <span className="relative block">
+              <ShieldCheck className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-secondary)]" />
+              <input
+                type="password"
+                name="password"
+                placeholder="Password"
+                onChange={handleChange}
+                required
+                className="ui-input pl-10"
+              />
+            </span>
+          </label>
+          {isPasswordTouched && (
+            <div className="rounded-xl border border-[var(--border-default)] bg-[var(--bg-surface-soft)] p-3">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-[var(--text-secondary)]">Strength</span>
+                <span className={`font-semibold ${strengthTone}`}>{passwordEvaluation.label}</span>
+              </div>
+              <div className="mt-2 grid grid-cols-5 gap-1.5" aria-hidden="true">
+                {[1, 2, 3, 4, 5].map((idx) => (
+                  <span
+                    key={idx}
+                    className={`h-1.5 rounded-full ${idx <= passwordEvaluation.passedCount
+                      ? 'bg-[var(--brand-primary)]'
+                      : 'bg-[var(--border-default)]'
+                      }`}
+                  />
+                ))}
+              </div>
+              <p className="mt-2 text-xs text-[var(--text-secondary)]">
+                Strong enough: <span className={passwordEvaluation.meetsMinimum ? 'text-emerald-600 dark:text-emerald-300' : 'text-amber-600 dark:text-amber-300'}>{passwordEvaluation.meetsMinimum ? 'Yes' : 'Not yet'}</span>
+              </p>
+              <ul className="mt-2 space-y-1.5 text-xs text-[var(--text-secondary)]">
+                {passwordEvaluation.checks.map((rule) => (
+                  <li key={rule.key} className="inline-flex items-center gap-1.5">
+                    {rule.passed ? (
+                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-300" />
+                    ) : (
+                      <XCircle className="h-3.5 w-3.5 text-[var(--text-secondary)]" />
+                    )}
+                    {rule.label}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <label className="block space-y-2">
+            <span className="text-sm font-medium text-[var(--text-primary)]">Confirm Password</span>
+            <span className="relative block">
+              <ShieldCheck className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-secondary)]" />
+              <input
+                type="password"
+                name="confirmPassword"
+                placeholder="Confirm Password"
+                onChange={handleChange}
+                required
+                className="ui-input pl-10"
+              />
+            </span>
+          </label>
+          {hasConfirmValue && (
+            <p
+              role={isMatch ? 'status' : 'alert'}
+              className={`text-xs font-medium ${isMatch ? 'text-emerald-600 dark:text-emerald-300' : 'text-red-600 dark:text-red-400'}`}
+            >
+              {isMatch ? 'Passwords match.' : 'Passwords do not match.'}
+            </p>
+          )}
+
           <button
             type="submit"
             disabled={isLoading}
-            className={`w-full flex justify-center items-center gap-2 bg-blue-500 text-white py-2 rounded-md hover:bg-blue-600 transition-colors ${isLoading ? 'opacity-60 cursor-not-allowed' : ''
-              }`}
+            className="ui-button"
           >
             {isLoading ? (
               <>
@@ -89,7 +180,10 @@ function Register() {
                 Registering...
               </>
             ) : (
-              'Register'
+              <>
+                Register
+                <ArrowRight className="h-4 w-4" />
+              </>
             )}
           </button>
         </form>

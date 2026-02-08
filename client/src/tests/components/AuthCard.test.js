@@ -15,17 +15,32 @@ describe('components/AuthCard.js', () => {
         expect(screen.getByText('Bottom Content')).toBeInTheDocument();
     });
 
-    it('applies correct classes for light and dark mode backgrounds', () => {
+    it('renders default hero content and new card container', () => {
         const { container } = render(
             <AuthCard title="Theme Test">Theme Child</AuthCard>
         );
 
-        const outerDiv = container.querySelector('div.min-h-screen');
-        expect(outerDiv).toHaveClass('bg-gray-100');
-        expect(outerDiv).toHaveClass('dark:bg-gray-900');
+        expect(screen.getAllByText('Secure Access').length).toBeGreaterThan(0);
+        expect(container.querySelector('.ui-card')).toBeInTheDocument();
+    });
 
-        const cardDiv = container.querySelector('div.max-w-md');
-        expect(cardDiv).toHaveClass('bg-white');
-        expect(cardDiv).toHaveClass('dark:bg-gray-800');
+    it('renders custom hero copy when provided', () => {
+        render(
+            <AuthCard
+                title="Custom Card"
+                badge="Custom Badge"
+                headline="Custom Headline"
+                description="Custom Description"
+                points={['Point One', 'Point Two']}
+            >
+                Body
+            </AuthCard>
+        );
+
+        expect(screen.getAllByText('Custom Badge').length).toBeGreaterThan(0);
+        expect(screen.getAllByText('Custom Headline').length).toBeGreaterThan(0);
+        expect(screen.getByText('Custom Description')).toBeInTheDocument();
+        expect(screen.getByText('Point One')).toBeInTheDocument();
+        expect(screen.getByText('Point Two')).toBeInTheDocument();
     });
 });

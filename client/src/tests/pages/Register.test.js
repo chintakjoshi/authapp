@@ -33,6 +33,18 @@ describe('pages/Register.js', () => {
         expect(screen.getByPlaceholderText(/confirm password/i)).toBeInTheDocument();
     });
 
+    it('shows live password strength and match status', () => {
+        renderWithRouter(<Register />);
+
+        fireEvent.change(screen.getByPlaceholderText(/^password$/i), { target: { value: 'Password1!' } });
+        expect(screen.getByText(/strength/i)).toBeInTheDocument();
+        expect(screen.getByText(/strong enough:/i)).toBeInTheDocument();
+        expect(screen.getByText('Strong')).toBeInTheDocument();
+
+        fireEvent.change(screen.getByPlaceholderText(/confirm password/i), { target: { value: 'Password1!' } });
+        expect(screen.getByText(/passwords match/i)).toBeInTheDocument();
+    });
+
     it('shows error if passwords do not match', async () => {
         renderWithRouter(<Register />);
         fireEvent.change(screen.getByPlaceholderText(/^password$/i), { target: { value: 'password1' } });
@@ -42,7 +54,8 @@ describe('pages/Register.js', () => {
             fireEvent.click(screen.getByRole('button', { name: /register/i }));
         });
 
-        expect(await screen.findByText(/passwords do not match/i)).toBeInTheDocument();
+        const mismatchMessages = await screen.findAllByText(/passwords do not match/i);
+        expect(mismatchMessages.length).toBeGreaterThan(0);
     });
 
     it('submits form and calls /auth/register API on valid input', async () => {
