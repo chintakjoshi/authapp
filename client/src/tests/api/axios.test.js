@@ -84,7 +84,7 @@ describe('api/axios.js', () => {
             const mockAxiosInstance = axios.__mockInstance;
 
             mockAxiosInstance.post.mockResolvedValueOnce({
-                data: { accessToken: 'new-token' },
+                data: { accessToken: 'new-token', refreshToken: 'rotated-refresh-token' },
             });
             mockAxiosInstance.mockResolvedValueOnce({
                 config: { headers: { Authorization: 'Bearer new-token' } }
@@ -105,6 +105,7 @@ describe('api/axios.js', () => {
                 deviceId: expect.any(String),
             });
             expect(localStorage.getItem('token')).toBe('new-token');
+            expect(localStorage.getItem('refreshToken')).toBe('rotated-refresh-token');
             expect(mockAxiosInstance).toHaveBeenCalledWith(originalRequest);
             expect(retriedRequest.config.headers['Authorization']).toBe('Bearer new-token');
         });

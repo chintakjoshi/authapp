@@ -59,10 +59,22 @@ class JwtServiceTest {
         String token = jwtService.generateAccessToken(user());
 
         String username = jwtService.extractUsername(token);
-        boolean valid = jwtService.isTokenValid(token, user());
+        boolean valid = jwtService.isTokenValid(token, user(), JwtService.ACCESS_TOKEN_TYPE);
 
         assertEquals("testuser", username);
         assertTrue(valid);
+    }
+
+    // Refresh token cannot be treated as access token
+    @Test
+    void refreshToken_shouldFailAccessValidation() {
+        String refreshToken = jwtService.generateRefreshToken(user());
+
+        boolean validAsAccess = jwtService.isTokenValid(refreshToken, user(), JwtService.ACCESS_TOKEN_TYPE);
+        boolean validAsRefresh = jwtService.isTokenValid(refreshToken, user(), JwtService.REFRESH_TOKEN_TYPE);
+
+        assertFalse(validAsAccess);
+        assertTrue(validAsRefresh);
     }
 
     // Invalid/malformed token

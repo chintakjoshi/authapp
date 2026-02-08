@@ -12,6 +12,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.web.servlet.MockMvc;
 import webapp_withauth.authapp.model.RefreshRequest;
+import webapp_withauth.authapp.repository.RefreshTokenRepository;
 import webapp_withauth.authapp.security.JwtService;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -19,6 +20,8 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import static org.mockito.Mockito.when;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -30,6 +33,9 @@ public class RefreshControllerTest {
 
     @MockBean
     private JwtService jwtService;
+
+    @Autowired
+    private RefreshTokenRepository refreshTokenRepository;
 
     private final ObjectMapper mapper = new ObjectMapper();
 
@@ -46,12 +52,14 @@ public class RefreshControllerTest {
             };
         });
 
-        when(jwtService.isTokenValid(anyString(), any())).thenAnswer(invocation -> {
+        when(jwtService.isTokenValid(anyString(), any(), anyString())).thenAnswer(invocation -> {
             String token = invocation.getArgument(0);
-            return token.equals("dummy.token.100");
+            String tokenType = invocation.getArgument(2);
+            return token.equals("dummy.token.100") && JwtService.REFRESH_TOKEN_TYPE.equals(tokenType);
         });
 
         when(jwtService.generateAccessToken(any())).thenReturn("mocked.access.token");
+        when(jwtService.generateRefreshToken(any())).thenReturn("mocked.refresh.token");
     }
 
     // valid refresh token + device match → new access token
@@ -68,7 +76,11 @@ public class RefreshControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(mapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.accessToken").exists());
+                .andExpect(jsonPath("$.accessToken").exists())
+                .andExpect(jsonPath("$.refreshToken").value("mocked.refresh.token"));
+
+        assertFalse(refreshTokenRepository.findByToken("dummy.token.100").isPresent());
+        assertTrue(refreshTokenRepository.findByToken("mocked.refresh.token").isPresent());
     }
 
     // invalid token → 401
