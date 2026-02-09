@@ -29,7 +29,7 @@ Make sure you have the following installed:
 ### 🔧 Step 1: Configure Environment
 
 1. Rename `.env-sample` to `.env`
-2. Insert your credentials into the environment variables.  
+2. Insert your credentials into the environment variables.
    👉 To create credentials, [click here](https://myaccount.google.com/apppasswords)
 
 ---
@@ -69,3 +69,20 @@ docker exec -it <container_id> psql -U postgres -d authdb
 ## 📫 Contact
 
 For any issues or suggestions, please open an issue on the [GitHub repo](https://github.com/chintakjoshi/authapp).
+
+## Git Commit and Push Checks
+
+This repository now includes local git hooks for:
+- Auto-fix trailing/extra whitespace in staged text files
+- Linting (including unused variable and unreachable/dead-code checks) for `client/src`
+- Secret scanning on staged changes and pushed commits
+
+One-time setup (per clone):
+
+```powershell
+.\scripts\install-git-hooks.ps1
+```
+
+Manual alternatives:
+- `git config core.hooksPath .githooks`
+- `npm --prefix client run lint`
