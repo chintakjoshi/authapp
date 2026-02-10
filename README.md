@@ -72,7 +72,7 @@ For any issues or suggestions, please open an issue on the [GitHub repo](https:/
 
 ## Git Commit and Push Checks
 
-This repository now includes local git hooks for:
+This repository includes local git hooks for:
 - Auto-fix trailing/extra whitespace in staged text files
 - Linting (including unused variable and unreachable/dead-code checks) for `client/src`
 - Secret scanning on staged changes and pushed commits
